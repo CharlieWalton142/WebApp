@@ -15,8 +15,6 @@ def home():
     if current_user.is_authenticated:
             return render_template("home.html", user = current_user )
     
-    else:
-        return render_template("login.html")
 
 @views.route('/Calendar')
 @views.route('/Calendar/<int:year>/<int:month>/', methods=['GET','POST'])
@@ -62,7 +60,7 @@ def book_training():
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
         flash("Invalid date", "danger")
-        return redirect(url_for('calendar_view'))
+        return redirect(url_for('views.calendar_view'))
 
     # Map training_type to time_slot
     training_to_slot = {
@@ -74,7 +72,7 @@ def book_training():
 
     if not time_slot:
         flash("Invalid training type selected", "danger")
-        return redirect(url_for('calendar_view'))
+        return redirect(url_for('views.calendar_view'))
     
     if request.method == 'POST':
 
@@ -94,6 +92,6 @@ def book_training():
         flash("Booking Failed", "Error")
 
 
-    return redirect(url_for('calendar_view'))
+    return redirect(url_for('views.calendar_view'))
 
 

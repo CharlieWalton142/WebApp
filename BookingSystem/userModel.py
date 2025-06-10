@@ -22,7 +22,7 @@ class User(db.Model, UserMixin):
     bookings = db.relationship('Booking', backref='user', lazy=True)
 
 
-class Booking(db.Model):
+class Booking(db.Model, UserMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
