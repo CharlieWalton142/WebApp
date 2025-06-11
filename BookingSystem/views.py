@@ -42,7 +42,11 @@ def calendar_view(year=None, month=None):
     # Map bookings to days
     booked_by_day = {}
     for booking in bookings:
-        booked_by_day.setdefault(booking.date.day, []).append(booking)
+        booked_by_day.setdefault(booking.date.day, []).append({
+            "user_id": booking.user_id,
+            "training_type": booking.training_type,
+            "time_slot": booking.time_slot,
+        })
 
     # Previous / next month logic
     if month == 1:
@@ -78,7 +82,7 @@ def book_training():
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
-        flash("Invalid date", "danger")
+        flash("Invalid date", category = 'error')
         return redirect(url_for('views.calendar_view'))
 
     # Map training_type to time_slot
@@ -90,7 +94,7 @@ def book_training():
     time_slot = training_to_slot.get(training_type)
 
     if not time_slot:
-        flash("Invalid training type selected", "danger")
+        flash("Invalid training type selected", category = 'error')
         return redirect(url_for('views.calendar_view'))
     
     if request.method == 'POST':

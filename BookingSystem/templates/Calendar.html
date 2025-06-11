@@ -65,6 +65,22 @@
     height: 100%;
     background-color: #90caf9; /* full blue */
     }
+
+        .slot-unavailable {
+    background-color: #f8d7da;
+    color: #721c24;
+    height: 50%;
+    width: 100%;
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-align: center;
+    padding: 2px;
+    }
+
   </style>
 </head>
 <body>
@@ -106,12 +122,25 @@
                 {% set bookings = booked_by_day.get(day.day) %}
                 {% if bookings %}
                 {% for b in bookings %}
-                    {% if b.training_type == 'full_day' %}
-                        <div class="calendar-slot slot-full">{{ b.time_slot }}</div>
-                    {% elif b.training_type == 'morning_half' %}
-                        <div class="calendar-slot slot-morning">{{ b.time_slot }}</div>
-                    {% elif b.training_type == 'afternoon_half' %}
-                        <div class="calendar-slot slot-afternoon">{{ b.time_slot }}</div>
+                    {% if b.user_id == user.id %}
+                        <!-- Show your own bookings normally -->
+                        <div class="calendar-slot slot-{{ b.training_type }}">{{ b.time_slot }}</div>
+                        {% if b.training_type == 'full_day' %}
+                            <div class="calendar-slot slot-full">{{ b.time_slot }}</div>
+                        {% elif b.training_type == 'morning_half' %}
+                            <div class="calendar-slot slot-morning">{{ b.time_slot }}</div>
+                        {% elif b.training_type == 'afternoon_half' %}
+                            <div class="calendar-slot slot-afternoon">{{ b.time_slot }}</div>
+                        {% endif %}
+                    {% else %}
+                        <!-- Show red block for other users' bookings -->
+                        <div class="calendar-slot slot-unavailable"
+                            style="
+                            {{ 'top: 0;' if b.training_type == 'afternoon_half' else '' }}
+                            {{ 'bottom: 0;' if b.training_type == 'morning_half' else '' }}
+                            {{ 'height: 100%;' if b.training_type == 'full_day' else '' }}">
+                        {{ b.time_slot }} Unavailable
+                        </div>
                     {% endif %}
                 {% endfor %}
                 {% else %}
@@ -169,11 +198,61 @@
 
 <!-- Trigger Script -->
 <script>
-  function openTrainingBookingModal(date) {
-    const modal = new bootstrap.Modal(document.getElementById('trainingBookingModal'));
+    const bookingsData = {{ booked_by_day | tojson }};
+      
+    function openTrainingBookingModal(date) {
     document.getElementById("booking-date").value = date;
+
+    const select = document.getElementById("training-type");
+
+    // Reset all options
+    for (const opt of select.options) {
+        opt.disabled = false;
+        opt.hidden = false;
+        opt.textContent = opt.getAttribute("data-label") || opt.textContent;
+        opt.classList.remove("text-danger");
+    }
+
+    const day = new Date(date).getDate().toString();
+    const bookings = bookingsData[day] || [];
+
+    const typesBooked = bookings.map(b => b.training_type);
+
+    const disable = type => {
+        const opt = [...select.options].find(o => o.value === type);
+        if (opt) {
+        opt.disabled = true;
+        opt.classList.add("text-danger");
+        opt.textContent = opt.textContent.replace(/(\(.*\))?/, "(Unavailable)");
+        }
+    };
+
+    // If full day is booked, disable everything and add a disabled option
+    if (typesBooked.includes("full_day")) {
+        select.innerHTML = `
+        <option disabled selected>No shifts available</option>
+        `;
+    } else {
+        if (typesBooked.includes("morning_half")) {
+        disable("morning_half");
+        disable("full_day");
+        }
+        if (typesBooked.includes("afternoon_half")) {
+        disable("afternoon_half");
+        disable("full_day");
+        }
+
+        // If both halves are booked, hide the dropdown and show message
+        if (typesBooked.includes("morning_half") && typesBooked.includes("afternoon_half")) {
+        select.innerHTML = `
+            <option disabled selected>No shifts available</option>
+        `;
+        }
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById("trainingBookingModal"));
     modal.show();
-  }
+    }
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -182,3 +261,5 @@
 </html>
 
 {% endblock %}
+
+
