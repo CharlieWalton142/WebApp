@@ -9,6 +9,8 @@ from datetime import datetime, date
 views = Blueprint('views', __name__)
 
 
+
+
 @views.route('/')
 @login_required
 def home():
@@ -17,8 +19,8 @@ def home():
             return render_template("home.html", user = current_user )
     
 
-@views.route('/Calendar')
-@views.route('/Calendar/<int:year>/<int:month>/', methods=['GET', 'POST'])
+@views.route('/calendar')
+@views.route('/calendar/<int:year>/<int:month>/', methods=['GET', 'POST'])
 def calendar_view(year=None, month=None):
     today = date.today()
     if year is None or month is None:
