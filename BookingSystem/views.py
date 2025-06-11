@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for
 from .userModel import Booking
 from . import db
 from flask_login import login_user, logout_user, current_user, login_required
+from sqlalchemy import extract
 from calendar import monthrange
 from datetime import datetime, date
 
@@ -17,25 +18,33 @@ def home():
     
 
 @views.route('/Calendar')
-@views.route('/Calendar/<int:year>/<int:month>/', methods=['GET','POST'])
+@views.route('/Calendar/<int:year>/<int:month>/', methods=['GET', 'POST'])
 def calendar_view(year=None, month=None):
-    # 1. Default to today if no year/month in URL
     today = date.today()
     if year is None or month is None:
         year, month = today.year, today.month
 
-    # 2. Compute how many blanks before 1st
+    # Calendar generation
     first_day = date(year, month, 1)
-    start_weekday = (first_day.weekday() + 1) % 7  # Sunday=0
+    start_weekday = (first_day.weekday() + 1) % 7
     days_in_month = monthrange(year, month)[1]
 
-    calendar_days = [None]*start_weekday \
-                    + [date(year, month, d) for d in range(1, days_in_month+1)]
-    # pad end to full weeks
+    calendar_days = [None] * start_weekday + [date(year, month, d) for d in range(1, days_in_month + 1)]
     while len(calendar_days) % 7:
         calendar_days.append(None)
 
-    # 3. Compute prev / next month
+    # Fetch bookings for the month
+    bookings = Booking.query.filter(
+        db.extract('year', Booking.date) == year,
+        db.extract('month', Booking.date) == month
+    ).all()
+
+    # Map bookings to days
+    booked_by_day = {}
+    for booking in bookings:
+        booked_by_day.setdefault(booking.date.day, []).append(booking)
+
+    # Previous / next month logic
     if month == 1:
         prev_month, prev_year = 12, year - 1
     else:
@@ -46,8 +55,18 @@ def calendar_view(year=None, month=None):
     else:
         next_month, next_year = month + 1, year
 
-    return render_template('calendar.html',
-                           calendar_days=calendar_days, year=year, month=month, prev_year=prev_year, prev_month=prev_month, next_year=next_year, next_month=next_month, user = current_user)
+    return render_template(
+        'calendar.html',
+        calendar_days=calendar_days,
+        year=year,
+        month=month,
+        prev_year=prev_year,
+        prev_month=prev_month,
+        next_year=next_year,
+        next_month=next_month,
+        booked_by_day=booked_by_day,
+        user=current_user
+    )
 
 @views.route('/book-training', methods=['POST'])
 def book_training():
