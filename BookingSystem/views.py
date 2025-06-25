@@ -16,7 +16,25 @@ views = Blueprint('views', __name__)
 def home():
     #return "<h1>Test</h1>"
     if current_user.is_authenticated:
-            return render_template("home.html", user = current_user )
+            
+                # Calculate total hours from past bookings
+        today = date.today()
+        past_bookings = Booking.query.filter(
+            Booking.user_id == current_user.id,
+            Booking.date < today
+        ).all()
+
+        # Map training type to hours
+        type_to_hours = {
+            'full_day': 7,
+            'morning_half': 3,
+            'afternoon_half': 3
+        }
+
+        total_hours = sum(type_to_hours.get(b.training_type, 0) for b in past_bookings)
+
+
+        return render_template("home.html", user=current_user, total_hours=total_hours)
     
 
 @views.route('/calendar')
