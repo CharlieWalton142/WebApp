@@ -39,6 +39,7 @@ def home():
 
 @views.route('/calendar')
 @views.route('/calendar/<int:year>/<int:month>/', methods=['GET', 'POST'])
+@login_required
 def calendar_view(year=None, month=None):
     today = date.today()
     if year is None or month is None:
@@ -63,6 +64,7 @@ def calendar_view(year=None, month=None):
     booked_by_day = {}
     for booking in bookings:
         booked_by_day.setdefault(booking.date.day, []).append({
+            "id": booking.id,  # Needed for delete URL
             "user_id": booking.user_id,
             "training_type": booking.training_type,
             "time_slot": booking.time_slot,
@@ -137,4 +139,15 @@ def book_training():
 
     return redirect(url_for('views.calendar_view'))
 
+@views.route('/delete-booking/<int:booking_id>', methods=['POST'])
+@login_required
+def delete_booking(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    if booking.user_id != current_user.id:
+        flash("Unauthorized deletion attempt.", "danger")
+        return redirect(url_for('views.calendar_view'))
 
+    db.session.delete(booking)
+    db.session.commit()
+    flash("Booking deleted successfully.", "success")
+    return redirect(url_for('views.calendar_view'))  

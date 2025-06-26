@@ -34,7 +34,6 @@
                   {% for b in bookings %}
                     {% if b.user_id == user.id %}
                         <!-- Show your own bookings normally -->
-                        <div class="calendar-slot slot-{{ b.training_type }}">{{ b.time_slot }}</div>
                         {% if b.training_type == 'full_day' %}
                             <div class="calendar-slot slot-full">{{ b.time_slot }}</div>
                         {% elif b.training_type == 'morning_half' %}
@@ -104,6 +103,7 @@
 <!-- JSON Data Script -->
 <script>
   const bookingsData = {{ booked_by_day | tojson | safe }};
+  const currentUserId = {{ user.id }};
 </script>
 
 <!-- Modal Script -->
@@ -112,39 +112,67 @@
   function openTrainingBookingModal(date) {
     document.getElementById("booking-date").value = date;
     const select = document.getElementById("training-type");
+    const form = document.querySelector("#trainingBookingModal form");
+    const footer = document.querySelector("#trainingBookingModal .modal-footer");
 
-    for (const opt of select.options) {
-      opt.disabled = false;
-      opt.textContent = opt.getAttribute("data-label") || opt.textContent;
-      opt.classList.remove("text-danger");
-    }
+    // Reset form
+    form.action = "{{ url_for('views.book_training') }}";
+    select.innerHTML = `
+      <option selected disabled value="">Select training type</option>
+      <option value="full_day">Full Day</option>
+      <option value="morning_half">Morning Half Day (9am - 12 pm)</option>
+      <option value="afternoon_half">Afternoon Half Day (1pm - 4 pm)</option>
+    `;
 
     const day = new Date(date).getDate().toString();
     const bookings = bookingsData[day] || [];
-    const typesBooked = bookings.map(b => b.training_type);
+    const userBooking = bookings.find(b => b.user_id === currentUserId);
 
-    const disable = (type) => {
-      const opt = [...select.options].find(o => o.value === type);
-      if (opt) {
-        opt.disabled = true;
-        opt.classList.add("text-danger");
-        opt.textContent = `${opt.textContent} (Unavailable)`;
-      }
-    };
+    footer.innerHTML = `
+      <a href="{{ url_for('views.calendar_view') }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Booking</button>
+    `;
 
-    if (typesBooked.includes("full_day")) {
-      select.innerHTML = `<option disabled selected>No shifts available</option>`;
+    if (userBooking) {
+      // Disable dropdown - they already booked
+      select.innerHTML = `
+        <option selected disabled>${userBooking.time_slot} already booked</option>
+      `;
+
+      // Add delete button
+      const deleteForm = document.createElement("form");
+      deleteForm.method = "POST";
+      deleteForm.action = `/delete-booking/${userBooking.id}`;
+      deleteForm.onsubmit = () => confirm("Delete this booking?");
+      deleteForm.innerHTML = `
+        <button type="submit" class="btn btn-danger">Delete Booking</button>
+      `;
+      footer.appendChild(deleteForm);
     } else {
-      if (typesBooked.includes("morning_half")) {
-        disable("morning_half");
-        disable("full_day");
-      }
-      if (typesBooked.includes("afternoon_half")) {
-        disable("afternoon_half");
-        disable("full_day");
-      }
-      if (typesBooked.includes("morning_half") && typesBooked.includes("afternoon_half")) {
+      const typesBooked = bookings.map(b => b.training_type);
+      const disable = (type) => {
+        const opt = [...select.options].find(o => o.value === type);
+        if (opt) {
+          opt.disabled = true;
+          opt.classList.add("text-danger");
+          opt.textContent = `${opt.textContent} (Unavailable)`;
+        }
+      };
+
+      if (typesBooked.includes("full_day")) {
         select.innerHTML = `<option disabled selected>No shifts available</option>`;
+      } else {
+        if (typesBooked.includes("morning_half")) {
+          disable("morning_half");
+          disable("full_day");
+        }
+        if (typesBooked.includes("afternoon_half")) {
+          disable("afternoon_half");
+          disable("full_day");
+        }
+        if (typesBooked.includes("morning_half") && typesBooked.includes("afternoon_half")) {
+          select.innerHTML = `<option disabled selected>No shifts available</option>`;
+        }
       }
     }
 
