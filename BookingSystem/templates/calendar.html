@@ -29,33 +29,33 @@
         <div class="calendar-day-inner border">
           <div class="position-absolute top-0 start-0 w-100 text-start ps-1 small">{{ day.day }}</div>
 
-              {% set bookings = booked_by_day.get(day.day) %}
-                {% if bookings %}
-                  {% for b in bookings %}
-                    {% if b.user_id == user.id %}
-                        <!-- Show your own bookings normally -->
-                        {% if b.training_type == 'full_day' %}
-                            <div class="calendar-slot slot-full">{{ b.time_slot }}</div>
-                        {% elif b.training_type == 'morning_half' %}
-                            <div class="calendar-slot slot-morning">{{ b.time_slot }}</div>
-                        {% elif b.training_type == 'afternoon_half' %}
-                            <div class="calendar-slot slot-afternoon">{{ b.time_slot }}</div>
-                        {% endif %}
-                    {% else %}
-                        <!-- Show red block for other users' bookings -->
-                      <div class="calendar-slot slot-unavailable
-                          {% if b.training_type == 'morning_half' %} unavailable-morning
-                          {% elif b.training_type == 'afternoon_half' %} unavailable-afternoon
-                          {% elif b.training_type == 'full_day' %} unavailable-full
-                          {% endif %}">
-                        {{ b.time_slot }} Unavailable
-                      </div>
-                    {% endif %}
-                  {% endfor %}
-              {% else %}
-                <!-- force layout structure even without content -->
-                <div class="calendar-slot" style="height: 100%; visibility: hidden;"></div>
-              {% endif %}
+            {% set bookings = booked_by_day.get(day.day) %}
+            {% if bookings %}
+              {% for b in bookings %}
+                {% if user.admin == 1 or b.user_id == user.id %}
+                  <!-- Show bookings normally if admin OR user's own booking -->
+                  {% if b.training_type == 'full_day' %}
+                    <div class="calendar-slot slot-full">{{ b.time_slot }}</div>
+                  {% elif b.training_type == 'morning_half' %}
+                    <div class="calendar-slot slot-morning">{{ b.time_slot }}</div>
+                  {% elif b.training_type == 'afternoon_half' %}
+                    <div class="calendar-slot slot-afternoon">{{ b.time_slot }}</div>
+                  {% endif %}
+                {% else %}
+                  <!-- Red block for others' bookings (non-admin users only) -->
+                  <div class="calendar-slot slot-unavailable
+                      {% if b.training_type == 'morning_half' %} unavailable-morning
+                      {% elif b.training_type == 'afternoon_half' %} unavailable-afternoon
+                      {% elif b.training_type == 'full_day' %} unavailable-full
+                      {% endif %}">
+                    {{ b.time_slot }} Unavailable
+                  </div>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              <!-- Keep layout structure even if no bookings -->
+              <div class="calendar-slot" style="height: 100%; visibility: hidden;"></div>
+            {% endif %}
         </div>
       </div>
       {% else %}
@@ -77,10 +77,6 @@
       <div class="modal-body">
         <input type="hidden" id="booking-date" name="date">
 
-        <div class="mb-3">
-          <label for="training-name" class="form-label">Your Name</label>
-          <input type="text" class="form-control" id="training-name" name="name" required>
-        </div>
 
         <div class="mb-3">
           <label for="training-type" class="form-label">Training Session</label>

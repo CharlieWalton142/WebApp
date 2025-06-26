@@ -96,7 +96,7 @@ def calendar_view(year=None, month=None):
 
 @views.route('/book-training', methods=['POST'])
 def book_training():
-    name = request.form.get('name')
+    name = 'null' # request.form.get('name')
     training_type = request.form.get('training_type')
     date_str = request.form.get('date')
 
